@@ -1,164 +1,284 @@
-import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { moodService } from '../services/authService';
+import React, { useState, useEffect } from 'react';
+import { 
+  Smile, 
+  Frown, 
+  Meh, 
+  Laugh, 
+  Angry, 
+  Heart, 
+  Calendar,
+  TrendingUp,
+  AlertTriangle
+} from 'lucide-react';
+import { moodService } from '../services/moodService';
 
 const MoodTracker = () => {
-  const [selectedMood, setSelectedMood] = useState(null);
-  const [journalEntry, setJournalEntry] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const { user } = useAuth();
+  const [selectedMood, setSelectedMood] = useState('');
+  const [intensity, setIntensity] = useState(5);
+  const [notes, setNotes] = useState('');
+  const [tags, setTags] = useState([]);
+  const [recentEntries, setRecentEntries] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const moods = [
-    { emoji: '😢', label: 'Very Sad', value: 1, color: 'red' },
-    { emoji: '😔', label: 'Sad', value: 2, color: 'orange' },
-    { emoji: '😐', label: 'Neutral', value: 3, color: 'yellow' },
-    { emoji: '😊', label: 'Happy', value: 4, color: 'lightgreen' },
-    { emoji: '😄', label: 'Very Happy', value: 5, color: 'green' }
+  const moodOptions = [
+    { value: 'very_happy', label: 'Very Happy', icon: Laugh, color: 'text-green-500' },
+    { value: 'happy', label: 'Happy', icon: Smile, color: 'text-green-400' },
+    { value: 'neutral', label: 'Neutral', icon: Meh, color: 'text-yellow-500' },
+    { value: 'sad', label: 'Sad', icon: Frown, color: 'text-blue-400' },
+    { value: 'very_sad', label: 'Very Sad', icon: Frown, color: 'text-blue-600' },
+    { value: 'anxious', label: 'Anxious', icon: AlertTriangle, color: 'text-orange-500' },
+    { value: 'stressed', label: 'Stressed', icon: TrendingUp, color: 'text-red-400' },
+    { value: 'angry', label: 'Angry', icon: Angry, color: 'text-red-600' },
   ];
+
+  const tagOptions = ['academic', 'social', 'family', 'health', 'financial', 'relationship', 'work'];
+
+  useEffect(() => {
+    loadRecentEntries();
+    loadStats();
+  }, []);
+
+  const loadRecentEntries = async () => {
+    try {
+      const response = await moodService.getMoodEntries({ limit: 10 });
+      setRecentEntries(response.moodEntries);
+    } catch (error) {
+      console.error('Error loading mood entries:', error);
+    }
+  };
+
+  const loadStats = async () => {
+    try {
+      const response = await moodService.getMoodStats();
+      setStats(response);
+    } catch (error) {
+      console.error('Error loading mood stats:', error);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedMood) return;
 
-    setLoading(true);
+    setIsSubmitting(true);
     try {
-      const moodData = {
-        mood: selectedMood.value,
-        emoji: selectedMood.emoji,
-        journal: journalEntry,
-        tags: getTagsFromJournal(journalEntry)
-      };
+      await moodService.createMoodEntry({
+        mood: selectedMood,
+        intensity,
+        notes,
+        tags
+      });
 
-      const response = await moodService.logMood(moodData, user.token);
-      
-      setSubmitted(true);
-      setTimeout(() => {
-        setSubmitted(false);
-        setSelectedMood(null);
-        setJournalEntry('');
-      }, 3000);
+      // Reset form
+      setSelectedMood('');
+      setIntensity(5);
+      setNotes('');
+      setTags([]);
+
+      // Reload data
+      await loadRecentEntries();
+      await loadStats();
+
+      alert('Mood entry saved successfully!');
     } catch (error) {
-      console.error('Error logging mood:', error);
-      alert('Failed to log mood. Please try again.');
+      console.error('Error saving mood entry:', error);
+      alert('Error saving mood entry. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
-    setLoading(false);
   };
 
-  const getTagsFromJournal = (text) => {
-    const tags = [];
-    if (text.toLowerCase().includes('anxious') || text.toLowerCase().includes('stress')) tags.push('anxiety');
-    if (text.toLowerCase().includes('sad') || text.toLowerCase().includes('depress')) tags.push('depression');
-    if (text.toLowerCase().includes('happy') || text.toLowerCase().includes('good')) tags.push('positive');
-    if (text.toLowerCase().includes('tired') || text.toLowerCase().includes('exhaust')) tags.push('fatigue');
-    return tags;
+  const toggleTag = (tag) => {
+    setTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
+
+  const getMoodIcon = (moodValue) => {
+    const mood = moodOptions.find(m => m.value === moodValue);
+    const Icon = mood ? mood.icon : Meh;
+    return <Icon className="w-5 h-5" />;
+  };
+
+  const getMoodColor = (moodValue) => {
+    const mood = moodOptions.find(m => m.value === moodValue);
+    return mood ? mood.color : 'text-gray-500';
   };
 
   return (
-    <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6">
-      <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">How are you feeling today?</h2>
-      
-      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-        {/* Mood Selection - Mobile Optimized */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3 sm:mb-4">
-            Select your current mood:
-          </label>
-          <div className="grid grid-cols-5 gap-2 sm:gap-4">
-            {moods.map((mood) => (
-              <button
-                key={mood.value}
-                type="button"
-                onClick={() => setSelectedMood(mood)}
-                className={`p-2 sm:p-4 rounded-lg border-2 text-xl sm:text-2xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                  selectedMood?.value === mood.value
-                    ? 'border-blue-500 bg-blue-50 scale-105 sm:scale-110'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                {mood.emoji}
-                <div className="text-xs mt-1 sm:mt-2 text-gray-600 hidden xs:block">
-                  {mood.label}
-                </div>
-              </button>
-            ))}
-          </div>
-          {/* Mobile labels below grid */}
-          <div className="grid grid-cols-5 gap-2 sm:gap-4 mt-2 xs:hidden">
-            {moods.map((mood) => (
-              <div key={mood.value} className="text-xs text-gray-500 text-center truncate">
-                {mood.label.split(' ')[0]}
-              </div>
-            ))}
-          </div>
-        </div>
+    <div className="space-y-6">
+      {/* Mood Entry Form */}
+      <div className="card">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+          <Heart className="w-6 h-6 mr-2 text-primary-600" />
+          How are you feeling?
+        </h2>
 
-        {/* Journal Entry */}
-        <div>
-          <label htmlFor="journal" className="block text-sm font-medium text-gray-700 mb-2">
-            Journal Entry (Optional)
-          </label>
-          <textarea
-            id="journal"
-            rows="3"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
-            placeholder="How was your day? What's on your mind?"
-            value={journalEntry}
-            onChange={(e) => setJournalEntry(e.target.value)}
-          />
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Mood Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Select your mood
+            </label>
+            <div className="grid grid-cols-4 gap-3">
+              {moodOptions.map((mood) => {
+                const Icon = mood.icon;
+                return (
+                  <button
+                    key={mood.value}
+                    type="button"
+                    onClick={() => setSelectedMood(mood.value)}
+                    className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all ${
+                      selectedMood === mood.value
+                        ? 'border-primary-500 bg-primary-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <Icon className={`w-8 h-8 ${mood.color}`} />
+                    <span className="text-xs mt-2 text-gray-700">{mood.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-        {/* Voice Input - Mobile Optimized */}
-        <div className="flex items-center space-x-3">
+          {/* Intensity Slider */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Intensity: {intensity}/10
+            </label>
+            <input
+              type="range"
+              min="1"
+              max="10"
+              value={intensity}
+              onChange={(e) => setIntensity(parseInt(e.target.value))}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+            />
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>Low</span>
+              <span>High</span>
+            </div>
+          </div>
+
+          {/* Tags */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              What's affecting your mood? (Optional)
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {tagOptions.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTag(tag)}
+                  className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                    tags.includes(tag)
+                      ? 'bg-primary-100 text-primary-700 border border-primary-300'
+                      : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
+                  }`}
+                >
+                  {tag.charAt(0).toUpperCase() + tag.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Additional notes (Optional)
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="What's on your mind? You can share as much or as little as you'd like..."
+              rows="4"
+              className="input-field resize-none"
+            />
+          </div>
+
+          {/* Submit Button */}
           <button
-            type="button"
-            className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            type="submit"
+            disabled={!selectedMood || isSubmitting}
+            className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span className="text-base">🎤</span>
-            <span className="hidden sm:inline">Voice Input</span>
+            {isSubmitting ? 'Saving...' : 'Save Mood Entry'}
           </button>
-          <span className="text-xs sm:text-sm text-gray-500">Or use voice to journal</span>
-        </div>
+        </form>
+      </div>
 
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={!selectedMood || loading}
-          className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 text-sm sm:text-base font-semibold"
-        >
-          {loading ? (
-            <span className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Logging Mood...
-            </span>
-          ) : (
-            'Submit Mood Check-in'
-          )}
-        </button>
-      </form>
-
-      {/* Success Message */}
-      {submitted && (
-        <div className="mt-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-md text-sm">
-          ✅ Mood recorded successfully! +10 wellness credits
-        </div>
-      )}
-
-      {/* Mood History Preview */}
-      <div className="mt-6 sm:mt-8">
-        <h3 className="text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Recent Mood History</h3>
-        <div className="space-y-2">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center space-x-2 sm:space-x-3">
-                <span className="text-xl sm:text-2xl">{moods[Math.floor(Math.random() * moods.length)].emoji}</span>
-                <span className="text-xs sm:text-sm text-gray-600">Today - {i + 1} hours ago</span>
+      {/* Recent Entries */}
+      <div className="card">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <Calendar className="w-5 h-5 mr-2 text-primary-600" />
+          Recent Entries
+        </h3>
+        <div className="space-y-3">
+          {recentEntries.map((entry) => (
+            <div
+              key={entry._id}
+              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+            >
+              <div className="flex items-center space-x-3">
+                <div className={getMoodColor(entry.mood)}>
+                  {getMoodIcon(entry.mood)}
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900 capitalize">
+                    {entry.mood.replace('_', ' ')}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Intensity: {entry.intensity}/10
+                  </p>
+                  {entry.notes && (
+                    <p className="text-sm text-gray-600 mt-1">{entry.notes}</p>
+                  )}
+                </div>
               </div>
-              <span className="text-xs text-gray-500 bg-green-100 px-2 py-1 rounded">+10</span>
+              <div className="text-right">
+                <p className="text-sm text-gray-500">
+                  {new Date(entry.createdAt).toLocaleDateString()}
+                </p>
+                <p className="text-xs text-gray-400">
+                  {new Date(entry.createdAt).toLocaleTimeString()}
+                </p>
+              </div>
             </div>
           ))}
+          {recentEntries.length === 0 && (
+            <p className="text-gray-500 text-center py-4">
+              No mood entries yet. Track your first mood above!
+            </p>
+          )}
         </div>
       </div>
+
+      {/* Statistics */}
+      {stats && (
+        <div className="card">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <TrendingUp className="w-5 h-5 mr-2 text-primary-600" />
+            Your Mood Statistics
+          </h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="text-center p-4 bg-blue-50 rounded-lg">
+              <p className="text-2xl font-bold text-blue-600">{stats.totalEntries}</p>
+              <p className="text-sm text-blue-700">Total Entries</p>
+            </div>
+            <div className="text-center p-4 bg-green-50 rounded-lg">
+              <p className="text-2xl font-bold text-green-600">
+                {stats.moodDistribution.length}
+              </p>
+              <p className="text-sm text-green-700">Different Moods</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

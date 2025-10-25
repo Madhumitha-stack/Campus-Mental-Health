@@ -1,57 +1,79 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useEffect } from 'react';
 import { authService } from '../services/authService';
 
-const AuthContext = createContext();
+export const AuthContext = createContext();
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
-
-export function AuthProvider({ children }) {
+export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('mentalHealthUser');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetchUserProfile();
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
-  const login = async (email, password) => {
+  const fetchUserProfile = async () => {
     try {
-      const userData = await authService.login(email, password);
+      const userData = await authService.getProfile();
       setUser(userData);
-      localStorage.setItem('mentalHealthUser', JSON.stringify(userData));
-      return { success: true };
     } catch (error) {
-      return { success: false, error: error.message };
+      localStorage.removeItem('token');
+      console.error('Error fetching user profile:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const signup = async (userData) => {
+  const login = async (email, password) => {
     try {
-      const newUser = await authService.signup(userData);
-      setUser(newUser);
-      localStorage.setItem('mentalHealthUser', JSON.stringify(newUser));
+      setError('');
+      const { user: userData, token } = await authService.login(email, password);
+      localStorage.setItem('token', token);
+      setUser(userData);
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.message };
+      setError(error.response?.data?.message || 'Login failed');
+      return { success: false, error: error.response?.data?.message || 'Login failed' };
+    }
+  };
+
+  const register = async (userData) => {
+    try {
+      setError('');
+      const { user: newUser, token } = await authService.register(userData);
+      localStorage.setItem('token', token);
+      setUser(newUser);
+      return { success: true };
+    } catch (error) {
+      setError(error.response?.data?.message || 'Registration failed');
+      return { success: false, error: error.response?.data?.message || 'Registration failed' };
     }
   };
 
   const logout = () => {
+    localStorage.removeItem('token');
     setUser(null);
-    localStorage.removeItem('mentalHealthUser');
+    setError('');
+  };
+
+  const updateUser = (updatedUser) => {
+    setUser(updatedUser);
   };
 
   const value = {
     user,
+    loading,
+    error,
     login,
-    signup,
+    register,
     logout,
-    loading
+    updateUser,
+    clearError: () => setError('')
   };
 
   return (
@@ -59,4 +81,4 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
-}
+};

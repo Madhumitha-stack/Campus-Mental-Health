@@ -1,147 +1,164 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { accessibility } from '../../utils/accessibility';
+import { Settings, Type, Eye, Zap } from 'lucide-react';
 
-const AccessibilitySettings = ({ onClose }) => {
+const AccessibilitySettings = () => {
+  const [isOpen, setIsOpen] = useState(false);
   const [settings, setSettings] = useState({
     highContrast: false,
     fontSize: 'medium',
-    textToSpeech: false,
-    reducedMotion: false,
+    reducedMotion: false
   });
 
-  const handleSettingChange = (key, value) => {
-    setSettings(prev => ({
-      ...prev,
-      [key]: value
-    }));
+  useEffect(() => {
+    // Load saved settings
+    const highContrast = localStorage.getItem('highContrast') === 'enabled';
+    const fontSize = localStorage.getItem('fontSize') || 'medium';
+    const reducedMotion = localStorage.getItem('reducedMotion') === 'enabled';
 
-    // Apply settings immediately
-    if (key === 'highContrast') {
-      document.body.classList.toggle('high-contrast', value);
+    setSettings({
+      highContrast,
+      fontSize,
+      reducedMotion
+    });
+  }, []);
+
+  const toggleHighContrast = () => {
+    const newValue = !settings.highContrast;
+    setSettings(prev => ({ ...prev, highContrast: newValue }));
+    
+    if (newValue) {
+      accessibility.enableHighContrast();
+    } else {
+      accessibility.disableHighContrast();
     }
-    if (key === 'fontSize') {
-      document.documentElement.style.fontSize = 
-        value === 'large' ? '18px' : value === 'xlarge' ? '20px' : '16px';
-    }
-    if (key === 'reducedMotion') {
-      document.body.classList.toggle('reduced-motion', value);
+  };
+
+  const changeFontSize = (size) => {
+    setSettings(prev => ({ ...prev, fontSize: size }));
+    accessibility.setFontSize(size);
+  };
+
+  const toggleReducedMotion = () => {
+    const newValue = !settings.reducedMotion;
+    setSettings(prev => ({ ...prev, reducedMotion: newValue }));
+    
+    if (newValue) {
+      accessibility.reduceMotion();
+    } else {
+      accessibility.restoreMotion();
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">Accessibility Settings</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 text-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
-              aria-label="Close settings"
-            >
-              ×
-            </button>
-          </div>
+    <>
+      {/* Floating Action Button */}
+      <button
+        onClick={() => setIsOpen(true)}
+        className="fixed bottom-6 right-6 bg-primary-600 text-white p-4 rounded-full shadow-lg hover:bg-primary-700 transition-colors z-50"
+        aria-label="Open accessibility settings"
+      >
+        <Settings className="w-6 h-6" />
+      </button>
 
-          <div className="space-y-6">
-            {/* High Contrast */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-gray-800">High Contrast Mode</h3>
-                <p className="text-sm text-gray-600">Enhanced color contrast</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.highContrast}
-                  onChange={(e) => handleSettingChange('highContrast', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
+      {/* Modal */}
+      {isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+                <Settings className="w-5 h-5 mr-2" />
+                Accessibility Settings
+              </h2>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label="Close settings"
+              >
+                ✕
+              </button>
             </div>
 
-            {/* Font Size */}
-            <div>
-              <h3 className="font-semibold text-gray-800 mb-3">Font Size</h3>
-              <div className="grid grid-cols-3 gap-2">
-                {['Small', 'Medium', 'Large'].map(size => (
-                  <button
-                    key={size}
-                    onClick={() => handleSettingChange('fontSize', size.toLowerCase())}
-                    className={`p-3 border rounded-lg text-center transition-colors ${
-                      settings.fontSize === size.toLowerCase()
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-gray-300'
+            {/* Settings Options */}
+            <div className="p-6 space-y-6">
+              {/* Font Size */}
+              <div>
+                <label className="flex items-center text-sm font-medium text-gray-700 mb-3">
+                  <Type className="w-4 h-4 mr-2" />
+                  Font Size
+                </label>
+                <div className="flex space-x-2">
+                  {['small', 'medium', 'large'].map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => changeFontSize(size)}
+                      className={`flex-1 py-2 px-3 rounded-lg border transition-colors ${
+                        settings.fontSize === size
+                          ? 'bg-primary-100 border-primary-500 text-primary-700'
+                          : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {size.charAt(0).toUpperCase() + size.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* High Contrast */}
+              <div className="flex items-center justify-between">
+                <label className="flex items-center text-sm font-medium text-gray-700">
+                  <Eye className="w-4 h-4 mr-2" />
+                  High Contrast
+                </label>
+                <button
+                  onClick={toggleHighContrast}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    settings.highContrast ? 'bg-primary-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      settings.highContrast ? 'translate-x-6' : 'translate-x-1'
                     }`}
-                  >
-                    {size}
-                  </button>
-                ))}
+                  />
+                </button>
+              </div>
+
+              {/* Reduced Motion */}
+              <div className="flex items-center justify-between">
+                <label className="flex items-center text-sm font-medium text-gray-700">
+                  <Zap className="w-4 h-4 mr-2" />
+                  Reduced Motion
+                </label>
+                <button
+                  onClick={toggleReducedMotion}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    settings.reducedMotion ? 'bg-primary-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      settings.reducedMotion ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
               </div>
             </div>
 
-            {/* Text-to-Speech */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-gray-800">Text-to-Speech</h3>
-                <p className="text-sm text-gray-600">Read content aloud</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.textToSpeech}
-                  onChange={(e) => handleSettingChange('textToSpeech', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
+            {/* Footer */}
+            <div className="px-6 py-4 bg-gray-50 rounded-b-xl">
+              <button
+                onClick={() => setIsOpen(false)}
+                className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 transition-colors"
+              >
+                Apply Settings
+              </button>
             </div>
-
-            {/* Reduced Motion */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-gray-800">Reduced Motion</h3>
-                <p className="text-sm text-gray-600">Minimize animations</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.reducedMotion}
-                  onChange={(e) => handleSettingChange('reducedMotion', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
-          </div>
-
-          <div className="mt-8 flex space-x-3">
-            <button
-              onClick={onClose}
-              className="flex-1 bg-gray-500 text-white py-3 px-4 rounded-lg font-semibold hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
-            >
-              Close
-            </button>
-            <button
-              onClick={() => {
-                // Reset all settings
-                setSettings({
-                  highContrast: false,
-                  fontSize: 'medium',
-                  textToSpeech: false,
-                  reducedMotion: false,
-                });
-                document.body.classList.remove('high-contrast', 'reduced-motion');
-                document.documentElement.style.fontSize = '16px';
-              }}
-              className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-            >
-              Reset All
-            </button>
           </div>
         </div>
-      </div>
-    </div>
+      )}
+    </>
   );
 };
 

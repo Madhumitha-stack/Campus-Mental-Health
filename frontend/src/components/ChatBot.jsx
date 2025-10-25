@@ -1,35 +1,41 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { chatbotService } from '../services/authService';
+import { Send, Bot, User, AlertTriangle } from 'lucide-react';
+import { chatbotService } from "../services/chatbotServices";
 
 const ChatBot = () => {
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      text: "Hello! I'm your mental health assistant. How can I support you today?",
-      sender: 'bot',
-      timestamp: new Date()
-    }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [crisisAlert, setCrisisAlert] = useState(null);
   const messagesEndRef = useRef(null);
-  const { user } = useAuth();
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = async (e) => {
+  // Initial welcome message
+  useEffect(() => {
+    setMessages([
+      {
+        id: 1,
+        text: "Hello! I'm here to listen and support you. How are you feeling today?",
+        sender: 'bot',
+        timestamp: new Date(),
+        type: 'greeting'
+      }
+    ]);
+  }, []);
+
+  const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!inputMessage.trim()) return;
+    if (!inputMessage.trim() || isLoading) return;
 
     const userMessage = {
-      id: messages.length + 1,
+      id: Date.now(),
       text: inputMessage,
       sender: 'user',
       timestamp: new Date()
@@ -40,145 +46,170 @@ const ChatBot = () => {
     setIsLoading(true);
 
     try {
-      const response = await chatbotService.sendMessage(inputMessage, user?._id);
+      const response = await chatbotService.sendMessage(inputMessage);
       
-      const botResponse = {
-        id: messages.length + 2,
-        text: response.response,
+      const botMessage = {
+        id: Date.now() + 1,
+        text: response.response.text,
         sender: 'bot',
         timestamp: new Date(),
-        isCrisis: response.isCrisis,
-        sentiment: response.sentiment
+        type: response.response.type,
+        urgent: response.response.urgent,
+        resources: response.response.resources
       };
 
-      setMessages(prev => [...prev, botResponse]);
+      setMessages(prev => [...prev, botMessage]);
+
+      // Handle crisis alerts
+      if (response.analysis.crisisDetected) {
+        setCrisisAlert({
+          level: response.analysis.level,
+          message: response.response.text,
+          resources: response.response.resources
+        });
+      }
+
     } catch (error) {
-      const errorResponse = {
-        id: messages.length + 2,
-        text: "I'm having trouble connecting right now. Please try again or use the SOS button for immediate help.",
+      console.error('Error sending message:', error);
+      const errorMessage = {
+        id: Date.now() + 1,
+        text: "I'm having trouble responding right now. Please try again in a moment.",
         sender: 'bot',
-        timestamp: new Date()
+        timestamp: new Date(),
+        type: 'error'
       };
-      setMessages(prev => [...prev, errorResponse]);
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
-  const quickReplies = [
-    "I'm feeling anxious",
-    "I need coping strategies",
-    "Connect me with resources",
-    "I'm feeling sad today"
-  ];
+  const closeCrisisAlert = () => {
+    setCrisisAlert(null);
+  };
 
   return (
-    <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md overflow-hidden">
-      {/* Chat Header */}
-      <div className="bg-blue-600 text-white p-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-            <span className="text-lg">🤖</span>
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold">Mental Health Assistant</h2>
-            <p className="text-blue-100 text-sm">24/7 Support • Always Confidential</p>
+    <div className="flex flex-col h-full bg-white rounded-xl shadow-lg">
+      {/* Crisis Alert */}
+      {crisisAlert && (
+        <div className={`p-4 border-l-4 ${
+          crisisAlert.level === 'critical' 
+            ? 'bg-red-50 border-red-500' 
+            : 'bg-yellow-50 border-yellow-500'
+        }`}>
+          <div className="flex items-start">
+            <AlertTriangle className={`w-5 h-5 mt-0.5 mr-3 ${
+              crisisAlert.level === 'critical' ? 'text-red-500' : 'text-yellow-500'
+            }`} />
+            <div className="flex-1">
+              <h3 className="font-semibold text-gray-900">Important Notice</h3>
+              <p className="text-sm text-gray-700 mt-1">{crisisAlert.message}</p>
+              {crisisAlert.resources && crisisAlert.resources.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-sm font-medium text-gray-900">Emergency Resources:</p>
+                  <ul className="text-sm text-gray-700 mt-1 list-disc list-inside">
+                    {crisisAlert.resources.map((resource, index) => (
+                      <li key={index}>{resource.name}: {resource.number}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={closeCrisisAlert}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              ✕
+            </button>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Chat Messages */}
-      <div className="h-96 overflow-y-auto p-4 bg-gray-50">
+      {/* Messages Container */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex mb-4 ${
+            className={`flex ${
               message.sender === 'user' ? 'justify-end' : 'justify-start'
             }`}
           >
             <div
-              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
                 message.sender === 'user'
-                  ? 'bg-blue-600 text-white'
-                  : message.isCrisis
-                  ? 'bg-red-100 border border-red-300 text-red-800'
-                  : 'bg-white text-gray-800 border border-gray-200'
+                  ? 'bg-primary-600 text-white rounded-br-none'
+                  : message.urgent
+                  ? 'bg-red-100 text-red-900 border border-red-300'
+                  : 'bg-gray-100 text-gray-900 rounded-bl-none'
               }`}
             >
-              <p className="text-sm">{message.text}</p>
-              <p className={`text-xs mt-1 ${
-                message.sender === 'user' ? 'text-blue-200' : 'text-gray-500'
-              }`}>
-                {message.timestamp.toLocaleTimeString()}
-              </p>
-              {message.isCrisis && (
-                <div className="mt-2 p-2 bg-red-200 rounded text-red-900 text-xs">
-                  🚨 Crisis detected - Please use the SOS button for immediate help
+              <div className="flex items-start space-x-2">
+                {message.sender === 'bot' && (
+                  <Bot className="w-4 h-4 mt-1 flex-shrink-0" />
+                )}
+                <div>
+                  <p className="text-sm">{message.text}</p>
+                  {message.resources && message.resources.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-gray-300">
+                      <p className="text-xs font-semibold mb-1">Resources:</p>
+                      {message.resources.map((resource, index) => (
+                        <div key={index} className="text-xs">
+                          <strong>{resource.name}:</strong> {resource.number}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
+                {message.sender === 'user' && (
+                  <User className="w-4 h-4 mt-1 flex-shrink-0" />
+                )}
+              </div>
+              <p className="text-xs opacity-70 mt-1 text-right">
+                {message.timestamp.toLocaleTimeString([], { 
+                  hour: '2-digit', 
+                  minute: '2-digit' 
+                })}
+              </p>
             </div>
           </div>
         ))}
-        
         {isLoading && (
-          <div className="flex justify-start mb-4">
-            <div className="bg-white border border-gray-200 px-4 py-2 rounded-lg">
+          <div className="flex justify-start">
+            <div className="bg-gray-100 text-gray-900 px-4 py-2 rounded-2xl rounded-bl-none">
               <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
               </div>
             </div>
           </div>
         )}
-        
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick Replies */}
-      <div className="border-t border-gray-200 p-4">
-        <div className="flex flex-wrap gap-2 mb-4">
-          {quickReplies.map((reply, index) => (
-            <button
-              key={index}
-              onClick={() => setInputMessage(reply)}
-              className="px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-            >
-              {reply}
-            </button>
-          ))}
-        </div>
-
-        {/* Input Area */}
-        <form onSubmit={handleSend} className="flex space-x-4">
-          <div className="flex-1">
-            <input
-              type="text"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              placeholder="Type your message here..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              disabled={isLoading}
-            />
-          </div>
+      {/* Input Form */}
+      <form onSubmit={handleSendMessage} className="border-t border-gray-200 p-4">
+        <div className="flex space-x-2">
+          <input
+            type="text"
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            placeholder="Type your message here..."
+            className="flex-1 input-field"
+            disabled={isLoading}
+          />
           <button
             type="submit"
-            disabled={!inputMessage.trim() || isLoading}
-            className="px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            disabled={isLoading || !inputMessage.trim()}
+            className="bg-primary-600 text-white p-2 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Send
+            <Send className="w-5 h-5" />
           </button>
-        </form>
-      </div>
-
-      {/* Emergency Section */}
-      <div className="border-t border-gray-200 bg-red-50 p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-semibold text-red-800">Need Immediate Help?</h3>
-            <p className="text-sm text-red-600">Use the SOS button above for emergency contacts</p>
-          </div>
         </div>
-      </div>
+        <p className="text-xs text-gray-500 mt-2 text-center">
+          This chat is anonymous and secure. In crisis situations, please contact emergency services.
+        </p>
+      </form>
     </div>
   );
 };

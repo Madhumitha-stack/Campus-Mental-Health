@@ -1,8 +1,10 @@
-import express from 'express';
-import { chat } from '../controllers/chatbotController.js';
+const express = require('express');
+const chatbotController = require('../controllers/chatbotController');
+const auth = require('../middleware/auth');
 
 const router = express.Router();
 
-router.post('/', chat);
+router.post('/message', auth, chatbotController.processMessage);
+router.get('/history', auth, chatbotController.getConversationHistory);
 
-export default router;
+module.exports = router;

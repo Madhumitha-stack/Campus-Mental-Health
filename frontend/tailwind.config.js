@@ -1,4 +1,4 @@
-// tailwind.config.js
+/** @type {import('tailwindcss').Config} */
 export default {
   content: [
     "./index.html",
@@ -20,23 +20,16 @@ export default {
           900: '#0c4a6e',
         },
         mental: {
-          calm: '#a7f3d0',
-          balanced: '#6ee7b7',
-          stressed: '#fde68a',
-          anxious: '#fdba74',
-          crisis: '#fca5a5'
+          calm: '#a5b4fc',
+          peaceful: '#c7d2fe',
+          anxious: '#fde68a',
+          stressed: '#fdba74',
+          depressed: '#fca5a5'
         }
       },
-      animation: {
-        'pulse-soft': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'float': 'float 6s ease-in-out infinite',
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
       },
-      keyframes: {
-        float: {
-          '0%, 100%': { transform: 'translateY(0px)' },
-          '50%': { transform: 'translateY(-20px)' },
-        }
-      }
     },
   },
   plugins: [],

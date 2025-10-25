@@ -1,66 +1,93 @@
 import React, { useState } from 'react';
+import { Phone, X, AlertTriangle } from 'lucide-react';
 
 const SOSButton = () => {
-  const [showEmergency, setShowEmergency] = useState(false);
-
-  const handleSOS = () => {
-    setShowEmergency(true);
-    // In a real app, this would trigger emergency protocols
-    console.log('SOS triggered - emergency protocols activated');
-  };
+  const [isOpen, setIsOpen] = useState(false);
 
   const emergencyContacts = [
-    { name: 'Campus Counseling', number: '(555) 123-HELP', available: '24/7' },
-    { name: 'Crisis Text Line', number: 'Text HOME to 741741', available: '24/7' },
-    { name: 'National Suicide Prevention', number: '988', available: '24/7' },
-    { name: 'Emergency Services', number: '911', available: '24/7' }
+    { name: 'Emergency Services', number: '911', description: 'Immediate emergency assistance' },
+    { name: 'Suicide Prevention Lifeline', number: '988', description: '24/7 crisis support' },
+    { name: 'Crisis Text Line', number: 'Text HOME to 741741', description: 'Text-based crisis support' },
+    { name: 'Campus Security', number: '(555) 123-4567', description: '24/7 campus safety' },
+    { name: 'Counseling Center', number: '(555) 123-4568', description: 'Mental health support' },
   ];
+
+  const handleCall = (number) => {
+    if (number.includes('Text')) {
+      // For text lines, show message
+      alert(`Please ${number} for crisis support`);
+    } else {
+      // For phone numbers, initiate call
+      window.open(`tel:${number}`, '_self');
+    }
+    setIsOpen(false);
+  };
 
   return (
     <>
+      {/* SOS Button */}
       <button
-        onClick={handleSOS}
-        className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors duration-200 flex items-center space-x-2 shadow-lg"
-        aria-label="Emergency SOS Help"
+        onClick={() => setIsOpen(true)}
+        className="fixed bottom-6 left-6 bg-red-600 text-white p-4 rounded-full shadow-lg hover:bg-red-700 transition-colors z-50 flex items-center justify-center animate-pulse"
+        aria-label="Emergency SOS"
       >
-        <span className="text-lg">🆘</span>
-        <span>SOS</span>
+        <AlertTriangle className="w-6 h-6" />
       </button>
 
-      {showEmergency && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
-            <div className="p-6">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-red-600 text-2xl">🆘</span>
+      {/* Emergency Modal */}
+      {isOpen && (
+        <div className="fixed inset-0 bg-red-600 bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="bg-red-600 text-white p-6 rounded-t-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <AlertTriangle className="w-6 h-6 mr-2" />
+                  <h2 className="text-xl font-bold">Emergency Support</h2>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">Emergency Support</h2>
-                <p className="text-gray-600">Help is available. Please reach out to one of these resources:</p>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="text-white hover:text-red-200 transition-colors"
+                  aria-label="Close emergency panel"
+                >
+                  <X className="w-6 h-6" />
+                </button>
               </div>
+              <p className="mt-2 text-red-100">
+                You are not alone. Help is available 24/7.
+              </p>
+            </div>
 
-              <div className="space-y-3 mb-6">
-                {emergencyContacts.map((contact, index) => (
-                  <div key={index} className="p-3 border border-gray-200 rounded-lg hover:border-red-300 transition-colors">
-                    <div className="font-semibold text-gray-800">{contact.name}</div>
-                    <div className="text-lg font-bold text-red-600">{contact.number}</div>
-                    <div className="text-sm text-gray-500">{contact.available}</div>
+            {/* Emergency Contacts */}
+            <div className="p-6 space-y-4">
+              {emergencyContacts.map((contact, index) => (
+                <div
+                  key={index}
+                  className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                >
+                  <h3 className="font-semibold text-gray-900">{contact.name}</h3>
+                  <p className="text-sm text-gray-600 mt-1">{contact.description}</p>
+                  <div className="flex items-center justify-between mt-3">
+                    <span className="text-lg font-mono text-primary-600">
+                      {contact.number}
+                    </span>
+                    <button
+                      onClick={() => handleCall(contact.number)}
+                      className="flex items-center bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                    >
+                      <Phone className="w-4 h-4 mr-2" />
+                      Call
+                    </button>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
+            </div>
 
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                <p className="text-sm text-red-700 text-center">
-                  Your safety is important. Please reach out for help if you're in crisis.
-                </p>
-              </div>
-
-              <button
-                onClick={() => setShowEmergency(false)}
-                className="w-full bg-gray-500 text-white py-3 px-4 rounded-lg font-semibold hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
-              >
-                Close
-              </button>
+            {/* Safety Message */}
+            <div className="px-6 py-4 bg-yellow-50 border-t border-yellow-200">
+              <p className="text-sm text-yellow-800 text-center">
+                Your safety is important. Please reach out if you're in crisis.
+              </p>
             </div>
           </div>
         </div>

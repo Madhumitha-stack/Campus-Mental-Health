@@ -1,16 +1,80 @@
-# React + Vite
+# Campus Mental Health MVP
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A comprehensive mental health support platform for college campuses featuring AI-powered chatbot, mood tracking, peer support, and crisis detection.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 🤖 AI Chatbot Support
+- 24/7 mental health support
+- Crisis detection and intervention
+- Sentiment analysis
+- Resource recommendations
 
-## React Compiler
+### 📊 Mood Tracking
+- Daily mood logging
+- Sentiment analysis
+- Trend visualization
+- Pattern recognition
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 👥 Peer Support Network
+- Connect with trained peer supporters
+- Support groups
+- Anonymous chatting
 
-## Expanding the ESLint configuration
+### 🗺️ Safe Spaces Map
+- Campus mental health resources
+- Counseling centers
+- Quiet zones
+- Emergency contacts
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 📅 Wellness Calendar
+- Proactive alerts
+- Wellness events
+- Academic stress detection
+- Self-care reminders
+
+### ♿ Accessibility
+- High contrast mode
+- Font size adjustment
+- Reduced motion
+- Keyboard navigation
+
+### 🆘 Emergency Features
+- SOS button
+- Crisis hotlines
+- Emergency contacts
+- Campus security integration
+
+## Tech Stack
+
+### Frontend
+- React 18
+- Vite
+- Tailwind CSS
+- Lucide Icons
+- Axios
+
+### Backend
+- Node.js
+- Express.js
+- MongoDB
+- JWT Authentication
+- Natural Language Processing
+
+### Machine Learning
+- Sentiment analysis
+- Crisis detection
+- Pattern recognition
+- Natural language processing
+
+## Setup Instructions
+
+### Prerequisites
+- Node.js 16+
+- MongoDB
+- npm or yarn
+
+### Backend Setup
+1. Navigate to backend directory:
+   ```bash
+   cd backend

@@ -1,39 +1,52 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const moodEntrySchema = new mongoose.Schema({
-  userId: {
+  user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
+    required: true
   },
   mood: {
+    type: String,
+    enum: ['very_happy', 'happy', 'neutral', 'sad', 'very_sad', 'anxious', 'stressed', 'angry'],
+    required: true
+  },
+  intensity: {
     type: Number,
-    required: true,
     min: 1,
-    max: 5,
+    max: 10,
+    required: true
   },
-  emoji: {
+  notes: {
     type: String,
-    required: true,
-  },
-  journal: {
-    type: String,
-    default: '',
-  },
-  voiceNote: {
-    type: String,
-    default: '',
+    maxlength: 500
   },
   tags: [{
     type: String,
+    enum: ['academic', 'social', 'family', 'health', 'financial', 'relationship', 'work']
   }],
-  sentiment: {
-    type: String,
-    enum: ['positive', 'neutral', 'negative', 'crisis'],
-    default: 'neutral',
+  sentimentScore: {
+    type: Number,
+    min: -1,
+    max: 1
   },
+  crisisLevel: {
+    type: String,
+    enum: ['low', 'medium', 'high', 'critical'],
+    default: 'low'
+  },
+  location: {
+    type: String
+  },
+  weather: {
+    type: String
+  }
 }, {
-  timestamps: true,
+  timestamps: true
 });
 
-export default mongoose.model('MoodEntry', moodEntrySchema);
+// Index for efficient querying
+moodEntrySchema.index({ user: 1, createdAt: -1 });
+moodEntrySchema.index({ crisisLevel: 1 });
+
+module.exports = mongoose.model('MoodEntry', moodEntrySchema);

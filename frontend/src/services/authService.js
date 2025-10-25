@@ -1,42 +1,61 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = '/api/auth';
 
+// Create axios instance with default config
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: 'http://localhost:5000',
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
+
+// Add token to requests
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Handle token expiration
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const authService = {
   async login(email, password) {
-    const response = await api.post('/auth/login', { email, password });
+    const response = await api.post(`${API_URL}/login`, { email, password });
     return response.data;
   },
 
-  async signup(userData) {
-    const response = await api.post('/auth/register', userData);
-    return response.data;
-  }
-};
-
-export const chatbotService = {
-  async sendMessage(message, userId) {
-    const response = await api.post('/chatbot', { message, userId });
-    return response.data;
-  }
-};
-
-export const moodService = {
-  async logMood(moodData, token) {
-    const response = await api.post('/mood/log', moodData, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+  async register(userData) {
+    const response = await api.post(`${API_URL}/register`, userData);
     return response.data;
   },
 
-  async getMoodHistory(days = 7, token) {
-    const response = await api.get(`/mood/history?days=${days}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    return response.data;
+  async getProfile() {
+    const response = await api.get(`${API_URL}/profile`);
+    return response.data.user;
+  },
+
+  async updateProfile(profileData) {
+    const response = await api.put(`${API_URL}/profile`, profileData);
+    return response.data.user;
   }
 };
+
+export default api;
