@@ -1,37 +1,42 @@
-// Mock authentication service
+import axios from 'axios';
+
+const API_URL = 'http://localhost:5000/api';
+
+const api = axios.create({
+  baseURL: API_URL,
+});
+
 export const authService = {
   async login(email, password) {
-    // Simulate API call
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (email && password) {
-          resolve({
-            id: '1',
-            email,
-            name: email.split('@')[0],
-            avatar: '👤'
-          });
-        } else {
-          reject(new Error('Invalid credentials'));
-        }
-      }, 1000);
-    });
+    const response = await api.post('/auth/login', { email, password });
+    return response.data;
   },
 
   async signup(userData) {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (userData.email && userData.password) {
-          resolve({
-            id: '1',
-            email: userData.email,
-            name: userData.name || userData.email.split('@')[0],
-            avatar: '👤'
-          });
-        } else {
-          reject(new Error('Registration failed'));
-        }
-      }, 1000);
+    const response = await api.post('/auth/register', userData);
+    return response.data;
+  }
+};
+
+export const chatbotService = {
+  async sendMessage(message, userId) {
+    const response = await api.post('/chatbot', { message, userId });
+    return response.data;
+  }
+};
+
+export const moodService = {
+  async logMood(moodData, token) {
+    const response = await api.post('/mood/log', moodData, {
+      headers: { Authorization: `Bearer ${token}` }
     });
+    return response.data;
+  },
+
+  async getMoodHistory(days = 7, token) {
+    const response = await api.get(`/mood/history?days=${days}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   }
 };
