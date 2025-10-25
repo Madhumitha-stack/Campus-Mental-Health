@@ -1,13 +1,10 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { authService } from '../services/authService';
 
 const AuthContext = createContext();
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  return useContext(AuthContext);
 }
 
 export function AuthProvider({ children }) {
@@ -17,25 +14,14 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const storedUser = localStorage.getItem('mentalHealthUser');
     if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Error parsing stored user data:', error);
-        localStorage.removeItem('mentalHealthUser');
-      }
+      setUser(JSON.parse(storedUser));
     }
     setLoading(false);
   }, []);
 
   const login = async (email, password) => {
     try {
-      const userData = {
-        id: '1',
-        email: email,
-        name: email.split('@')[0],
-        avatar: '👤'
-      };
-      
+      const userData = await authService.login(email, password);
       setUser(userData);
       localStorage.setItem('mentalHealthUser', JSON.stringify(userData));
       return { success: true };
@@ -46,13 +32,7 @@ export function AuthProvider({ children }) {
 
   const signup = async (userData) => {
     try {
-      const newUser = {
-        id: '1',
-        email: userData.email,
-        name: userData.name || userData.email.split('@')[0],
-        avatar: '👤'
-      };
-      
+      const newUser = await authService.signup(userData);
       setUser(newUser);
       localStorage.setItem('mentalHealthUser', JSON.stringify(newUser));
       return { success: true };
@@ -74,5 +54,9 @@ export function AuthProvider({ children }) {
     loading
   };
 
-  return React.createElement(AuthContext.Provider, { value: value }, children);
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
